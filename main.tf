@@ -1,16 +1,35 @@
 provider "aws" {
     region = "us-east-1"
-    access_key = "AKIAZY6XHON3HBN7BW7E"
-    secret_key = "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"
+   # access_key = "AKIAZY6XHON3HBN7BW7E"
+    #secret_key = "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"
   
 }
 resource "aws_vpc" "development-vpc" {
-  cidr_block = "10.0.0.0/16"
+    cidr_block = var.vpc_cidr_block
+    tags = {
+        Name = "${var.env_prefix}-vpc" 
+    }
+
 }
 
-resource "aws_subnet" "dev-subnet-1" {
-    vpc_id = aws_vpc.development-vpc.id
-    cidr_block = "10.0.10.0/24"
-    availability_zone = "us-east-1a"
+ module "myapp-subnet" {
+    source = "./modules/subnet"
+     subnet_cidr_block = var.subnet_cidr_block
+    avail_zone = var.avail_zone
+    env_prefix = var.env_prefix
+    vpc_id = aws_vpc.myapp-vpc.id
+    default_route_table_id = aws_vpc.myapp-vpc.default_route_table_id
 
+ }
+
+module "myapp-server" {
+    source = "./modules/webserver"
+    vpc_id = aws_vpc.myapp-vpc.id
+    my_ip = var.my_ip
+    env_prefix = var.env_prefix
+    image_name = var.image_name
+    public_key_location = var.public_key_location
+    instance_type = var.instance_type
+    subnet_id = module.myapp-subnet.subnet.id
+    avail_zone = var.avail_zone
 }
